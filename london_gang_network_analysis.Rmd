@@ -1,0 +1,616 @@
+---
+title: "London Gang Network Analysis"
+author: "Stan Ionel Eduard"
+date: "February 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+We work on the London-based inner-city street gang from $2005$ to $2009$, concerning black people, operating from a social housing estate. Data is available on [UCINET Software website](https://sites.google.com/site/ucinetsoftware/datasets/covert-networks/londongang "London Gang") and comes from anonymised police arrest and conviction data for **all confirmed** members of the gang.
+
+The network is **undirected** and there has $54$ nodes representing the monitored people having the following attributes:
+
+* `Person`, representing the person's **id**,
+* `Age`, representing the **age** of such person,
+* `Birthplace`, representing the **birthplace** of such person ($1$ for West Africa, $2$ for Caribbean, $3$ for United Kingdom, and $4$ for East Africa),
+* `Residence`, representing the fact that the person is **resident**,
+* `Arrests`, representing the **number of arrests** of such person,
+* `Convictions`, representing the **number of convictions** of such person,
+* `Prison`, representing the fact that such person is **arrested**,
+* `Music`, representing the fact that such person **listens to music**,
+* `Ranking`, representing a **ranking** of such person.
+
+The ties of such network are given as an weighted adjacency matrix, i.e. a $54 \times 54$ (weighted) matrix, where the weights are: 
+
+* $1$, representing the fact that they have **hanged-out**, 
+* $2$, representing the fact that they have **co-offended together**, 
+* $3$, representing the facts that they have **co-offended together** and that they have **committed serious crimes**, 
+* $4$, representing the facts that they have **co-offended together**, **committed serious crimes** and that there is a **kin** relationship (i.e. there is a family relationship in-between nodes).
+
+
+## Installation
+Before we begin our (tidy approach) analysis, first we need to install the following packages:
+```{r, eval=F}
+install.packages("tidyverse")
+install.packages("igraph")
+install.packages("ggraph")
+install.packages("stringr")
+install.packages("visNetwork")
+```
+and then we load such packages:
+```{r}
+library(tidyverse)
+library(igraph)
+library(ggraph)
+library(stringr)
+library(visNetwork)
+```
+
+
+# Data import
+We read the CSV files and store such information, and print some preliminary information about such structures as:
+```{r}
+relations <- as_tibble(read.table("london/gang.csv", header=TRUE, sep=",")) %>%
+  # select all columns, but not the first one
+  select(X1:X54)
+people <- read_csv("london/attr.csv", col_names=TRUE) %>%
+  # rename the column X1 as Person
+  rename(Person=X1)
+dim(relations) # 54 x 54 (i.e. the weighted adjacency matrix)
+class(relations)
+dim(people) # 54 x 9 (i.e. 54 people with their own attributes)
+class(people)
+```
+
+
+# Graph generation
+We need to manipulate the `relations` data frame in order to build a graph. We generate some containers (i.e. `from`, `to`, and `weight`) that store the information about such weighted `relations` as:
+```{r}
+from <- to <- weight <- NULL # containers
+for (i in 1:nrow(relations)) {
+  for (j in 1:ncol(relations)) {
+    if (relations[i,j] != 0) {
+      # attach an observation for each edge: (from, to, weight)
+      from <- c(from, i)
+      to <- c(to, j)
+      weight <- c(weight, relations[i,j])
+    }    
+  }
+}
+```
+and create $2$ `tibble`s, one for the `ties` and one for the `nodes`, as:
+```{r}
+# ties
+ties <- tibble(
+  from = from,            # from
+  to = to,                # to
+  weight = unlist(weight) # weight
+)
+# nodes
+nodes <- tibble(
+  person = 1:nrow(people),                # person
+  age = people$Age,                       # age
+  birthplace = factor(people$Birthplace), # birthplace
+  residence = factor(people$Residence),   # residence
+  arrests = people$Arrests,               # arrests
+  convinctions = people$Convictions,      # convictions
+  prison = factor(people$Prison),         # prison
+  music = factor(people$Music),           # music
+  ranking = factor(people$Ranking)        # ranking
+)
+```
+
+Now, we are ready to build our graph using the `igraph` package and to (preliminarly) plot such object as:
+```{r}
+# create an undirected graph
+g <- graph_from_data_frame(ties, directed=FALSE, vertices = nodes)
+# plot the graph
+plot(g, layout=layout_nicely(g), 
+     vertex.size=15, vertex.color='yellow', vertex.shape="circle", 
+     edge.label=ties$weight, edge.curved=TRUE)
+```
+
+Moreover, we can check the attributes of such graph as:
+```{r}
+attributes(summary(g)) # explore the attributes
+```
+
+
+# Explanatory data analysis (EDA)
+In this section we are going to explore our dataset in order to find some preliminary patterns. 
+
+In Statistics, a **rule of thumb**, when performing EDA, is to present graphical plots with (numerical) summaries. Therefore, we present such information as:
+```{r}
+summary(nodes$age)                          # summary for age
+ggplot(nodes, aes(x=age, stat(density))) +  # distribution for age
+  geom_histogram(binwidth=1.2, alpha=2/5) +
+  geom_density(color="red", size=1)
+
+table(nodes$birthplace)            # contingency table for birthplace
+ggplot(nodes, aes(x=birthplace)) + # plot such contingency table
+  geom_bar(alpha=2/5)
+
+table(nodes$residence)            # contingency table for residence
+ggplot(nodes, aes(x=residence)) + # plot such contingency table
+  geom_bar(alpha=2/5)
+
+summary(nodes$arrests)                          # summary for arrests
+ggplot(nodes, aes(x=arrests, stat(density))) +  # distribution for arrests
+  geom_histogram(binwidth=2, alpha=2/5) +
+  geom_density(color="red", size=1)
+
+summary(nodes$convinctions)                          # summary for convictions
+ggplot(nodes, aes(x=convinctions, stat(density))) +  # distribution for convictions
+  geom_histogram(binwidth=2, alpha=2/5) +
+  geom_density(color="red", size=1)
+  
+table(nodes$prison)            # contingency table for prison
+ggplot(nodes, aes(x=prison)) + # plot such contingency table
+  geom_bar(alpha=2/5)
+
+table(nodes$music)            # contingency table for music
+ggplot(nodes, aes(x=music)) + # plot such contingency table
+  geom_bar(alpha=2/5)
+
+table(nodes$ranking)            # contingency table for ranking
+ggplot(nodes, aes(x=ranking)) + # plot such contingency table
+  geom_bar(alpha=2/5)
+```
+
+Suppose that we would like to know:
+
+> How the arrests and convinctions change as a function of birthplace and residence?
+
+We could extract such information as:
+```{r}
+ggplot(nodes, aes(x=birthplace, y=arrests)) + # arrests as a function of birthplace
+  geom_boxplot(aes(color=birthplace))
+
+ggplot(nodes, aes(x=birthplace, y=convinctions)) + # convinctions as a function of birthplace
+  geom_boxplot(aes(color=birthplace))
+
+ggplot(nodes, aes(x=residence, y=arrests)) + # arrests as a function of residence
+  geom_boxplot(aes(color=residence))
+
+ggplot(nodes, aes(x=residence, y=convinctions)) + # convinctions as a function of residence
+  geom_boxplot(aes(color=residence))
+```
+
+Note that, although we have a small dataset, we can say that people that come from West Africa (i.e. `birthplace` is equal to $1$) tend to be more criminals, witnessed by the fact that the arrests and convinctions are (in general) higher. Moreover, people that do not have a `residence` tend to be more criminal, and the reasoning is similar.
+
+Now, suppose that we would like to know:
+
+> How arrests and convinctions change as a function of age? 
+
+We can extract such information through a scatterplot in the following way:
+```{r}
+ggplot(nodes, aes(x=age, y=arrests)) + # arrests as a function of age
+  geom_point(aes(color=birthplace), size=3) +
+  geom_smooth()
+
+ggplot(nodes, aes(x=age, y=convinctions)) + # convinctions as a function of age
+  geom_point(aes(color=birthplace), size=3) +
+  geom_smooth()
+```
+
+Note that, we have an expected behaviour, that is, people tend to be less criminal until a certain age, in this case $\approx 19-20$ years old, then they tend to be more criminal. Perhaps this is due the fact that until a fragile age, the parents of such individuals assume the full-responsability of their own childs, but then such individuals are grown-up and tend to act as criminals.
+
+# Centrality measures
+We can simply add centralities to nodes with the following commands:
+```{r}
+V(g)$degree <- degree(g)           # degree centrality
+V(g)$betweenness <- betweenness(g) # betweenness centrality
+V(g)$closeness <- closeness(g)     # closeness centrality
+V(g)$pr <- page_rank(g)$vector     # pagerank centrality
+attributes(summary(g))             # investigate the (new added) attributes
+```
+
+In order to use the `dplyr` package, which is already included by the `tidyverse`, we add the same information to the `nodes` as:
+```{r}
+nodes<- nodes %>%
+  mutate(
+    degree = degree(g),           # degree centrality
+    betweenness = betweenness(g), # betweeness centrality
+    closeness = closeness(g),     # closeness centrality
+    pr = page_rank(g)$vector)     # pagerank centrality
+```
+
+
+Let's start with a **simple question**:
+
+> Which is the most central person w.r.t. the centrality measures?
+
+To answer this question, we sort in a decreasing fashion the nodes by centralities as: 
+```{r}
+nodes %>%
+  select(person,degree,betweenness,closeness,pr) %>%
+  arrange(desc(degree))      # arrange by degree centrality (decreasing order)
+
+nodes %>%
+  select(person,degree,betweenness,closeness,pr) %>% 
+  arrange(desc(betweenness)) # arrange by betweenness centrality (decreasing order)
+
+nodes %>%
+  select(person,degree,betweenness,closeness,pr) %>%
+  arrange(desc(closeness))   # arrange by closeness centrality (decreasing order)
+
+nodes %>%
+  select(person,degree,betweenness,closeness,pr) %>%
+  arrange(desc(pr))          # arrange by pagerank centrality (decreasing order)
+```
+
+Note that, for this network, more or less, all centralities agree that node $1$ is the most central. Therefore, we can point out such node in the network as:
+```{r}
+V(g)$color <- "white"
+V(g)[1]$color <- "red"
+plot(g, layout=layout_with_fr(g), vertex.label=NA, vertex.size = 5)
+```
+
+We can use the `ggraph` package to plot a beautiful graph where we color the edges based on their weights (`weight`) and resize the nodes based on their PageRank (`pr`) centrality as:
+```{r}
+ggraph(g, layout = "with_kk") + 
+  geom_edge_link(aes(color = weight)) + # edge link geom, mapping color to weight
+  geom_node_point(aes(size = pr)) +     # node point geom, mapping size to pagerank centrality
+  theme_graph(base_family="sans")
+```
+
+or perhaps a more intuitive plot is the following:
+```{r}
+ggraph(g, layout = "with_kk") + 
+  geom_edge_link(aes(color = factor(weight))) + # edge link geom, mapping color to weight
+  geom_node_point(aes(size = pr)) +             # node point geom, mapping size to pr centrality
+  facet_edges(~factor(weight))                  # facet geom as function of weight
+```
+
+where we point out the relations between nodes. For instance, if `weight` is $4$, then the link means that the connected nodes have co-offended together, committed serious crimes and there is a kin relationship (bottom, right); this brings us to the next question:
+
+> What is the proportion of weak ties in the network?
+
+Weak ties are very important for several reasons. **todo motivations**. We can compute such ties in a straightforward way as:
+```{r}
+ties %>%
+  group_by(weight) %>%                                # group by weight
+  summarise(n = n(), proportion = n / nrow(ties)) %>% # compute summary
+  arrange(desc(n))                                    # sort in decreasing order by n
+```
+
+It seems that $\approx 58\%$ of the people in the network have hanged-out with each other, that is, perhaps **hanging out with the "wrong" people may lead people to commit (serious) crimes**. Therefore, reasoning by complementation, there are $\approx 42\%$ of the people that have done some crimes together.
+
+
+# Connection between nodes
+Finding connection patterns between nodes is perhaps one of the **most interesting things** that an analyst would like to explore. We would like to given an answer the following question:
+
+> What is the proportion of similar and dissimilar people?
+
+To answer this question, we use the **Pearson correlation coefficient** (other methods can be used, such as **cosine similarity**) to detect similarities. In order to compute such metric, we extrapolate the adjacency matrix from our graph `g` and compute the correlation matrix as:
+```{r}
+A <- as_adjacency_matrix(g, attr = "weight", names = FALSE) # get adjacency matrix 
+S <- cor(as.matrix(A))                                      # compute the correlation matrix
+diag(S) <- 0                                                # set the diagonal to 0
+```
+
+Given `S`, we can plot the distribution of the similarities in the following way:
+```{r}
+V <- as.vector(S) # flatten S to a vector
+ggplot(as.tibble(V), aes(x=value)) +
+  geom_histogram(aes(alpha=2/5), bins=30, show.legend=FALSE) +
+  geom_freqpoly(aes(color="red"), size=1, bins=30, show.legend=FALSE)
+```
+
+where $1$ means positive similarity, $-1$ means negative similarity (or dissimilarity), and $0$ means no correlation at all
+
+Note that, the above plot points out a **positive skewness** (or, alternatively called, **right skewness**). To answer the question, we compute the proportion of similar (dissimilar) nodes whose similarity is greater (lower or equal) than $0$ as:
+```{r}
+cnt <- 0 # counter
+for (i in 1:length(V)) {
+  if (V[i] > 0) cnt <- cnt + 1
+}
+prop_sim <- cnt/length(V) # proportion of similar nodes
+print(prop_sim)           # print such proportion
+print(1-prop_sim)         # print the 1-complementary proportion (i.e. dissimilar proportion)
+```
+
+Not surprisingly, there is a **lot of similarity** between nodes, and this is an expected behavior. Moreover, let's try to give an answer to the following question:
+
+> Which are the most similar people?
+
+To answer this question, we can directly use the computed similarity matrix `S` by generating a weighted (undirected) graph `simil_graph` from it, where the weights are the similarity scores, then compute a `tibble`, named `simil_edges`, where each row corresponds to an edge with its similarity score, with the following commands:
+```{r}
+# create the similarity graph
+simil_graph <- graph_from_adjacency_matrix(S, mode = "undirected", weighted = TRUE)
+# compute the tibble
+simil_edges <- as.tibble(as_data_frame(simil_graph, what = "edges")) %>% 
+  mutate(from = as.integer(from), to = as.integer(to)) %>%
+  arrange(desc(weight))
+```
+
+Finally, we are ready to answer the question. In order to give a more realistic answer, we filter only those nodes whose degree is greater or equal than $5$, then we print the highest similar nodes:
+```{r}
+# compute the joint similarities
+joint_simil <- simil_edges %>% 
+  left_join(nodes, c("from" = "person")) %>% 
+  left_join(nodes, c("to" = "person")) %>%
+  filter(degree.x >= 5, degree.y >= 5) %>%
+  select(from, to, weight)
+joint_simil # print the most similar nodes
+```
+
+To have an intuitive idea on the similarity in the original network, we can filter out the most similar pairs and then plot the graph generated for such pairs as:
+```{r}
+# filter those pairs with similarity higher than 0.6
+filtered_pairs <- joint_simil %>%
+  filter(weight > 0.6)
+# create a similarity network with the filtered pairs
+similarity_network <- graph_from_data_frame(filtered_pairs, directed=FALSE)
+# get the nodes
+simil_nodes <- as.tibble(as_data_frame(similarity_network, what = "vertices"))
+# plot the result
+ggraph(similarity_network, layout="with_kk") +
+  geom_edge_link(aes(alpha=weight), edge_width=1) +
+  geom_node_text(aes(label=simil_nodes$name), repel=TRUE)
+```
+
+> Does the similarity between the most similar people changes as a function of their birthplace?
+
+In order to calculate such score, we need to create a `tibble`, named `pairs_with_bp`, that is the join between the `filtered_pairs`, which we have calculated before, and `nodes_bp`, which are the most similar nodes projected only on their `name` and `birthplace`. Given `pairs_with_bp`, we compute the metric of interest (i.e. the proportion of similar people as a function of their birthplace) in the following way:
+```{r}
+# convert the name of the similar nodes from the similarity network to an integer (i.e. its id)
+simil_nodes$name <- as.integer(simil_nodes$name)
+simil_nodes_with_bp <- simil_nodes %>%
+  left_join(nodes, by=c("name" = "person")) %>%
+  select(name, birthplace)
+
+# create a joint tibble of the most similar pairs with their birthplace 
+pairs_with_bp <- filtered_pairs %>%
+  left_join(simil_nodes_with_bp, c("from" = "name")) %>%
+  left_join(simil_nodes_with_bp, c("to" = "name"))
+
+# compute the proportion of similar people as a function of their birthplace 
+cnt <- 0
+for (i in 1:nrow(pairs_with_bp)) {
+  if(pairs_with_bp$birthplace.x[i] == pairs_with_bp$birthplace.y[i]) 
+    cnt <- cnt + 1
+}
+# print such proportion
+cnt/nrow(pairs_with_bp)
+```
+
+This behaviour can be checked by the following plot:
+```{r}
+similarity_network_with_bp <- graph_from_data_frame(filtered_pairs, 
+                                                    directed=FALSE, 
+                                                    vertices=simil_nodes_with_bp)
+ggraph(similarity_network_with_bp, layout="with_kk") +
+  geom_node_point(aes(color=factor(birthplace)), size=3) +
+  geom_edge_link(aes(alpha=weight), edge_width=1) +
+  geom_node_text(aes(label=simil_nodes$name), repel=TRUE)
+```
+
+The same behaviour is also empirically proven by the following (bottom-up) **clustering analysis** (an unsupervised learning algorithm that groups people together based on their similarities). The analysis is the following:
+```{r}
+# distance matrix from similarity matrix
+D <- 1-S
+# distance object from distance matrix
+d <- as.dist(D)
+# average-linkage clustering method
+cc <- hclust(d, method="average")
+plot(cc)
+clusters.list = rect.hclust(cc, k = 10, border="red")
+# cut dendrogram at 4 clusters
+clusters = cutree(cc, k = 10)
+# plot graph with clusters
+plot(g, vertex.color=clusters, layout=layout_with_fr(g))
+```
+
+Note that, similar nodes, from the previous analysis, are clustered together. Perhaps a more stilish plot, containing the same information, is the following:
+```{r}
+# extract dendogram
+dendrogram = as.dendrogram(cc)
+# plot a circular dendrogram
+ggraph(dendrogram, layout = 'dendrogram', circular = TRUE) + 
+  geom_edge_diagonal() +
+  geom_node_text(aes(filter = leaf, label = label, x = x*1.03, y=y*1.03), size = 3) +
+  theme_graph()
+```
+
+Now, we would like to answer the (more challenging) question:
+
+> Is it true that even if people know more people tend to commit crimes with those that belong to their own birthplace?
+
+Note that, in the above analysis, we have filtered only those nodes with degree greater or equal to $5$. To answer this interesting question, basically we redo the same analysis, but we filter on nodes with degree greater or equal to $15$:
+```{r}
+# compute the joint similarities
+joint_simil2 <- simil_edges %>% 
+  left_join(nodes, c("from" = "person")) %>% 
+  left_join(nodes, c("to" = "person")) %>%
+  filter(degree.x >= 15, degree.y >= 15) %>%
+  select(from, to, weight)
+
+# filter those pairs with similarity higher than 0.6
+filtered_pairs2 <- joint_simil2 %>%
+  filter(weight > 0.6)
+
+# create a similarity network with the filtered pairs
+similarity_network2 <- graph_from_data_frame(filtered_pairs2, directed=FALSE)
+
+# get the nodes
+simil_nodes2 <- as.tibble(as_data_frame(similarity_network2, what = "vertices"))
+
+# convert the name to an integer (i.e. its id)
+simil_nodes2$name <- as.integer(simil_nodes2$name)
+simil_nodes_with_bp2 <- simil_nodes2 %>%
+  left_join(nodes, by=c("name" = "person")) %>%
+  select(name, birthplace)
+
+# create a joint tibble of the most similar pairs with their birthplace 
+pairs_with_bp2 <- filtered_pairs2 %>%
+  left_join(simil_nodes_with_bp2, c("from" = "name")) %>%
+  left_join(simil_nodes_with_bp2, c("to" = "name"))
+
+# compute the proportion of similar people as a function of their birthplace 
+cnt2 <- 0
+for (i in 1:nrow(pairs_with_bp2)) {
+  if(pairs_with_bp2$birthplace.x[i] == pairs_with_bp2$birthplace.y[i]) 
+    cnt2 <- cnt2 + 1
+}
+# print such proportion
+cnt2/nrow(pairs_with_bp2)
+```
+
+Again, the behaviour can be checked by the following plot:
+```{r}
+similarity_network_with_bp2 <- graph_from_data_frame(filtered_pairs2, 
+                                                    directed=FALSE, 
+                                                    vertices=simil_nodes_with_bp2)
+ggraph(similarity_network_with_bp2, layout="with_kk") +
+  geom_node_point(aes(color=factor(birthplace)), size=3) +
+  geom_edge_link(aes(alpha=weight), edge_width=1) +
+  geom_node_text(aes(label=simil_nodes2$name), repel=TRUE)
+```
+
+Hence, we claim that it is true that **people that have higher acquintances tend to perfom crimes together with those that are ethnically similar to them**.
+
+
+# Power analysis
+We are interested in comparing the centrality of people against their (PageRank) power. In particular, we would like to identify people that are central and powerful. In order to perform such analysis, we define the following functions (powered by Massimo Franceschet):
+```{r}
+# Compute power x = (1/x) A 
+#INPUT
+# A = graph adjacency matrix
+# t = precision
+# OUTPUT
+# A list with:
+# vector = power vector
+# iter = number of iterations
+
+power = function(A, t) {
+  n = dim(A)[1];
+  # x_2k
+  x0 = rep(0, n);
+  # x_2k+1
+  x1 = rep(1, n);
+  # x_2k+2
+  x2 = rep(1, n);
+  diff = 1
+  eps = 1/10^t;
+  iter = 0;
+  while (diff > eps) {
+    x0 = x1;
+    x1 = x2;
+    x2 = (1/x2) %*% A;
+    diff = sum(abs(x2 - x0));
+    iter = iter + 1;
+  } 
+  # it holds now: alpha x2 = (1/x2) A
+  alpha = ((1/x2) %*% A[,1]) / x2[1];
+  # hence sqrt(alpha) * x2 = (1/(sqrt(alpha) * x2)) A
+  x2 = sqrt(alpha) %*% x2;
+  return(list(vector = as.vector(x2), iter = iter))
+} 
+```
+
+Such function computes the power of the people with an interative fashion. Therefore, we compute such powers as:
+```{r}
+damping = 0.15                # damping factor
+I <- diag(damping, vcount(g)) # identity matrix (with the damping factor on its diagonal)
+Ad <- A + I                   # A + I
+p <- power(Ad, 6)$vector      # compute power
+V(g)$power <- p               # assign power to the nodes
+
+nodes <- nodes %>%            # mutate the tibble nodes adding the new attribute power
+  mutate(power = p)
+
+nodes %>%                     # sort the nodes in decreasing order by their pagerank centrality
+  select(person, pr) %>%
+  arrange(desc(pr))
+
+nodes %>%                     # sort the nodes in decreasing order by their power score
+  select(person, power) %>%
+  arrange(desc(power))
+```
+
+We can also compute the correlations between such scores as:
+```{r}
+cor(nodes$pr, nodes$power)                    # Pearson correlation coef.
+cor(nodes$pr, nodes$power, method="spearman") # Spearman rank correlation coef.
+cor(nodes$pr, nodes$power, method="kendall")  # Kendall tau correlation coef.
+```
+
+> Who are the most central and powerful people?
+
+To answer this question, we plot such people and create a `tibble`, named `power_central_nodes`, as:
+```{r}
+mc <- quantile(nodes$pr, 0.75)    # 0.75 pagerank centrality quantile
+mp <- quantile(nodes$power, 0.75) # 0.75 power measure quantile
+plot(nodes$power, nodes$pr, xlab="power", ylab="centrality", pch=NA, bty="l")
+text(nodes$power, nodes$pr, labels=nodes$person, adj=c(0.5,0.5), cex=1, col = "lightblue")
+abline(h=mc, lty=3)               # horizontal line
+abline(v=mp, lty=3)               # vertical line
+
+power_central_nodes <- nodes %>% # compute the most powerful and central people
+  filter(power >= mp & pr >= mc) %>%
+  select(person, age, birthplace, pr, power)
+
+power_central_nodes              # print such people
+```
+
+> Based on their similarities, power and (PageRank) centrality, what is the proportion of people that have a parental relationship?
+
+To get the most powerful and central nodes, based on the similarity between them, we can compute them easily as:
+```{r}
+simil_power_central_nodes <- power_central_nodes %>%
+  inner_join(simil_nodes, c("person" = "name"))
+
+simil_power_central_nodes
+```
+
+Recall our similarity network graph, where we have restricted ourselves on the people who have at least $5$ acquintances:
+```{r}
+ggraph(similarity_network_with_bp, layout="with_kk") +
+  geom_node_point(aes(color=factor(birthplace)), size=3) +
+  geom_edge_link(aes(alpha=weight), edge_width=1) +
+  geom_node_text(aes(label=simil_nodes$name), repel=TRUE)
+```
+
+Note that, given the graph and the `simil_power_central_nodes` structure, the person $3$ is isolated from the others, therefore we can exclude such person from the analysis. Therefore, to answer our question, we can do the following:
+```{r}
+# remove the node 3
+simil_power_central_nodes <- simil_power_central_nodes %>%
+  filter(person != 3)
+
+simil_power_central_nodes # print most similar, powerful and central nodes (without 3)
+
+# compute the edges between such nodes 
+# NOTE: since the graph is undirected we have only a pair for each node
+ee <- filtered_pairs %>%
+  inner_join(simil_power_central_nodes, c("from" = "person")) %>%
+  inner_join(simil_power_central_nodes, c("to" = "person"))
+
+ee_f <- as.vector(ee$from) # flatten "from" to a vector
+ee_t <- as.vector(ee$to)   # flatten "to" to a vector
+
+# get the original weight (until now we have worked on the filtered similar pairs)
+filtered_pairs %>% 
+  inner_join(ties, c("from" = "from", "to" = "to")) %>%
+  filter(from %in% ee_f, to %in% ee_t) %>%
+  select(from, to, weight.y) %>%
+  rename(weight = weight.y)
+```
+
+As you can see, not surprisingly, people that are similar, powerful and central (w.r.t the measures computed before) **stick to each other as family**, given in terms as the weight on the relation between such nodes (i.e. $4$ in this case); this answers our question, that is, we have a $100\%$ proportion of such subjects.
+
+# Model
+Suppose now that we would like to make predictions on individuals. For instance, we could try to classify people based on the fact that they have been arrested or not (i.e. `prison=1` or `prison=0`). Therefore, we can formalize a **classification problem**. Briefly, the classification setting lies within the statistical learning framework, where for each observation (the people, in our case) has a label (i.e. the fact that they have been arrested or not, in our aforementioned example). 
+
+# Conclusions and discussion
+In this work, we have analyzed a gang network, concerning black people, who performed crimes in London, during a police observation-time from $2005$ to $2009$. We have downloaded the (anonymised) data, then we have built a graph from it. Each self-respecting statistical analysis has to perform a preliminary Explanatory Data Analysis (EDA), which we have done briefly. 
+
+We then moved on with the centrality analysis of the network and have pointed out some (preliminary) interesting facts. For instance, the network is very well tied, that is, people have hanged-out together and more than $40 \%$ have commited crimes together.
+
+In our opinion, the most interesting part of the presented analysis is relative to the part of the connection patterns between nodes. The criminality analysis was driven by the birthplace, and, perhaps not surprisingly, very important empirical proofs have outcomed. For instance, very connected people tend to act as criminals with their own people, that is, with those that came from their own birthplace. Moreover, strongly related people that are powerful and central also tend to commit crimes along with their families, and this is very natural if we think, for example, at the Italian Mafia. 
