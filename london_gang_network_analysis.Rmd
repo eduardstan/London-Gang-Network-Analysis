@@ -31,11 +31,11 @@ The ties of such network are given as a **weighted adjacency matrix**, i.e. a $5
 * $1$, representing the fact that the connected people have **hanged-out**, 
 * $2$, representing the fact that the connected people have **co-offended together**, 
 * $3$, representing the facts that the connected people have **co-offended together** and that they have **committed serious crimes**, 
-* $4$, representing the facts that the connected people have **co-offended together**, **committed serious crimes** and that there is a **kin relationship** (i.e. a family relationship in-between nodes).
+* $4$, representing the facts that the connected people have **co-offended together**, **committed serious crimes** and that there is a **kin relationship** (i.e. a family relationship) in-between nodes.
 
 In the subsequent analysis, we are going to use **nodes** and **people** interchangeably. The same holds for **edges**, **ties** and **relations**. We use the well-known **tidy approach** to make our analysis.
 
-Our objective is the analysis of such network in terms of **centrality and powerness of people**. Moreover, we aim to find patterns between subjects based on their birthplace, therefore we focus on the **similarity between nodes** and present some **social validation facts**, thanks to the knowledge that we acquire during the analysis.
+Our objective is the analysis of such network in terms of **centrality and power of people**. Moreover, we aim to find patterns between subjects based on their birthplace, therefore we focus on the **similarity between nodes** and present some **social validation facts**, thanks to the knowledge that we acquire during the analysis.
 
 ## Installation
 Before we begin our analysis, first we need to install the following packages:
@@ -68,10 +68,13 @@ people <- read_csv("data/attr.csv", col_names=TRUE) %>%
 
 Then we perform a preliminary unit test in order to check that the information is stored as we want:
 ```{r}
-dim(relations) # 54 x 54 (i.e. the weighted adjacency matrix)
-class(relations)
-dim(people) # 54 x 9 (i.e. 54 people with their own attributes)
-class(people)
+dim(relations)   # 54 x 54 (i.e. the weighted adjacency matrix)
+class(relations) # print the class of the relations
+head(relations)  # print the first observations of the relations
+
+dim(people)      # 54 x 9 (i.e. 54 people with their own attributes)
+class(people)    # print the class of the people
+head(people)     # print the first observations of the people
 ```
 
 
@@ -515,7 +518,7 @@ Hence, we claim that it is true that **people that have higher acquintances tend
 
 
 # Power analysis
-We are interested in comparing the centrality of people against their (PageRank) power. In particular, we would like to identify people that are central and powerful. In order to perform such analysis, we define the following function (powered by Massimo Franceschet) that computes the power of people:
+We are interested in comparing the centrality of people against their (PageRank) power. In particular, we would like to identify people that are central and powerful. In order to perform such analysis, we define the following function (powered by Bozzo, Enrico and Franceschet, Massimo) that computes the power of people:
 ```{r}
 # Compute power x = (1/x) A 
 #INPUT
@@ -716,3 +719,7 @@ In this work, we have analyzed a gang network, concerning black people, who perf
 We then moved on with the centrality analysis of the network and have pointed out some (preliminary) interesting facts. For instance, the network is very well tied, that is, people have hanged-out together and more than $40 \%$ have commited crimes together, either if they belong to the same family or not.
 
 In our opinion, the most interesting part of the presented analysis is relative to the part of the connection patterns between nodes. The criminality analysis was driven by the birthplace, and very important empirical proofs have outcomed. For instance, very connected people tend to act as criminals with their own people, that is, with those that belong to their own birthplace. Moreover, strongly related people that are powerful and central also tend to commit crimes along with their families, and this is very natural, if we think, for example, at the Italian Mafia. 
+
+For the sake of completeness, we have presented a short introduction on how one could fit a generalized linear model in order to classify instances. The scope of this work was not centered on such type of analysis, although one could investigate more on such aspects. For instance, one could fit a linear model in order to model a regression problem, or could try to use `rminer`'s arsenal of models in order to dig deeper into the model playground.
+
+We have achieved our goals proving that network science analysis is a powerful tool to investigate on the peculiarities of networks. For example, based on our case-study, the presented analysis could be explored by the police in order to catch the bad guys.
