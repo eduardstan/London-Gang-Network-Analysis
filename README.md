@@ -1,6 +1,6 @@
 # London Gang Network Analysis
 
-A tidy approach network analysis on the London-based inner-city street gang data from 2005 to 2009, concerning black people, operating from a social housing estate that have co-offended together. Data is available on [UCINET Software website] (https://sites.google.com/site/ucinetsoftware/datasets/covert-networks/londongang) and comes from anonymised police arrest and conviction data for **all confirmed** members of the gang.
+A tidy approach network analysis on the London-based inner-city street gang data from 2005 to 2009, concerning black people, operating from a social housing estate that have co-offended together. Data is available on [UCINET Software website](https://sites.google.com/site/ucinetsoftware/datasets/covert-networks/londongang) and comes from anonymised police arrest and conviction data for **all confirmed** members of the gang.
 
 The network is **undirected** and it has 54 nodes representing the monitored people having the following attributes:
 
