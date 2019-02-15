@@ -26,12 +26,12 @@ The network is **undirected** and it has $54$ nodes representing the monitored p
 * `Music`, representing the fact that such person **listened to music**,
 * `Ranking`, representing a **ranking** of such person.
 
-The ties of such network are given as an **weighted adjacency matrix**, i.e. a $54 \times 54$ (weighted) matrix, where the weights are: 
+The ties of such network are given as a **weighted adjacency matrix**, i.e. a $54 \times 54$ (weighted) matrix, where the weights are: 
 
 * $1$, representing the fact that the connected people have **hanged-out**, 
 * $2$, representing the fact that the connected people have **co-offended together**, 
 * $3$, representing the facts that the connected people have **co-offended together** and that they have **committed serious crimes**, 
-* $4$, representing the facts that the connected people have **co-offended together**, **committed serious crimes** and that there is a **kin** relationship (i.e. a family relationship in-between nodes).
+* $4$, representing the facts that the connected people have **co-offended together**, **committed serious crimes** and that there is a **kin relationship** (i.e. a family relationship in-between nodes).
 
 In the subsequent analysis, we are going to use **nodes** and **people** interchangeably. The same holds for **edges**, **ties** and **relations**. We use the well-known **tidy approach** to make our analysis.
 
