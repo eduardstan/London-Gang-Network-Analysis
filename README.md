@@ -19,7 +19,7 @@ The ties of such network are given as a **weighted adjacency matrix**, i.e. a 54
 - 1, representing the fact that the connected people have **hanged-out**,
 - 2, representing the fact that the connected people have **co-offended together**,
 - 3, representing the facts that the connected people have **co-offended together** and that they have **committed serious crimes**,
-- 4, representing the facts that the connected people have **co-offended together**, **committed serious crimes** and that there is a **kin relationship** (i.e. a family relationship in-between nodes).
+- 4, representing the facts that the connected people have **co-offended together**, **committed serious crimes** and that there is a **kin relationship** (i.e. a family relationship) in-between nodes.
 
 # Information about the repository
 In this repository you will find:
