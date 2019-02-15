@@ -35,7 +35,7 @@ The ties of such network are given as a **weighted adjacency matrix**, i.e. a $5
 
 In the subsequent analysis, we are going to use **nodes** and **people** interchangeably. The same holds for **edges**, **ties** and **relations**. We use the well-known **tidy approach** to make our analysis.
 
-Our objectives are the analysis of such network in terms of **centrality and powerness of people**. Moreover, our aim is to find patterns between subjects based on their birthplace, therefore we focus on the **similarity between nodes** and present some **social validation facts**, thanks to the knowledge that we acquire during the analysis.
+Our objective is the analysis of such network in terms of **centrality and powerness of people**. Moreover, we aim to find patterns between subjects based on their birthplace, therefore we focus on the **similarity between nodes** and present some **social validation facts**, thanks to the knowledge that we acquire during the analysis.
 
 ## Installation
 Before we begin our analysis, first we need to install the following packages:
