@@ -35,6 +35,8 @@ The ties of such network are given as a **weighted adjacency matrix**, i.e. a $5
 
 In the subsequent analysis, we are going to use **nodes** and **people** interchangeably. The same holds for **edges**, **ties** and **relations**. We use the well-known **tidy approach** to make our analysis.
 
+Our objectives are the analysis of such network in terms of **centrality and powerness of people**. Moreover, our aim is to find patterns between subjects based on their birthplace, therefore we focus on the **similarity between nodes** and present some **social validation facts**, thanks to the knowledge that we acquire during the analysis.
+
 ## Installation
 Before we begin our analysis, first we need to install the following packages:
 ```{r, eval=F}
@@ -53,10 +55,13 @@ library(ggraph)
 # Data import
 We read the CSV files and store such information as `tibble`s:
 ```{r}
-relations <- as_tibble(read.table("london/gang.csv", header=TRUE, sep=",")) %>%
+# gather the relations from the CSV file
+relations <- as_tibble(read.table("data/gang.csv", header=TRUE, sep=",")) %>%
   # select all columns, but not the first one
   select(X1:X54)
-people <- read_csv("london/attr.csv", col_names=TRUE) %>%
+
+# gather the people from the CSV file
+people <- read_csv("data/attr.csv", col_names=TRUE) %>%
   # rename the column X1 as Person
   rename(Person=X1)
 ```
@@ -260,7 +265,7 @@ We can use the `ggraph` package to plot a beautiful graph, where the edges are m
 ggraph(g, layout = "with_kk") + 
   geom_edge_link(aes(alpha = weight)) + # edge link geom, mapping alpha to weight
   geom_node_point(aes(size = pr)) +     # node point geom, mapping size to pagerank centrality
-  theme_graph()
+  theme_graph(base_family="sans")
 ```
 
 or perhaps a more intuitive plot is the following:
@@ -365,7 +370,7 @@ simil_nodes <- as.tibble(as_data_frame(similarity_network, what = "vertices"))
 ggraph(similarity_network, layout="with_kk") +
   geom_edge_link(aes(alpha=weight), edge_width=1) +         # edge link, mapping alpha to weight
   geom_node_text(aes(label=simil_nodes$name), repel=TRUE) + # node text, mapping label to nodes' id (i.e name)
-  theme_graph()
+  theme_graph(base_family="sans")
 ```
 
 > Does the similarity between the most similar people changes as a function of their birthplace?
@@ -411,7 +416,7 @@ ggraph(similarity_network_with_bp, layout="with_kk") +
   geom_node_point(aes(color=factor(birthplace)), size=3) + # geom node point, mapping color to birthplace
   geom_edge_link(aes(alpha=weight), edge_width=1) +         # geom edge link, mapping alpha to weight
   geom_node_text(aes(label=simil_nodes$name), repel=TRUE) + # geom node text, mapping label to id
-  theme_graph()
+  theme_graph(base_family="sans")
 ```
 
 The same behaviour is also empirically proven by the following (bottom-up) **clustering analysis** (an unsupervised learning algorithm that groups people together based on their similarities). The analysis is the following:
@@ -447,7 +452,7 @@ dendrogram = as.dendrogram(cc)
 ggraph(dendrogram, layout = 'dendrogram', circular = TRUE) + 
   geom_edge_diagonal() +
   geom_node_text(aes(filter = leaf, label = label, x = x*1.03, y=y*1.03), size = 3) +
-  theme_graph()
+  theme_graph(base_family="sans")
 ```
 
 Now, we would like to answer the **more challenging question**:
@@ -503,7 +508,7 @@ ggraph(similarity_network_with_bp2, layout="with_kk") +
   geom_node_point(aes(color=factor(birthplace)), size=3) +
   geom_edge_link(aes(alpha=weight), edge_width=1) +
   geom_node_text(aes(label=simil_nodes2$name), repel=TRUE) +
-  theme_graph()
+  theme_graph(base_family="sans")
 ```
 
 Hence, we claim that it is true that **people that have higher acquintances tend to perfom crimes together with those that are ethnically similar to them**.
