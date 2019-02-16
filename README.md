@@ -27,3 +27,8 @@ In this repository you will find:
 - the used data,
 - the R markdown of the analysis,
 - the html rendering of such analysis.
+
+# License
+© Stan I. Eduard, Computer Science M.Sc. Student at the Università degli Studi di Udine.
+
+Licensed under the [MIT License](LICENSE.md).
